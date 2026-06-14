@@ -1,0 +1,11 @@
+{
+  "updatedAt": null,
+  "status": "aguardando_configuracao",
+  "message": "Aguardando configuração dos segredos DROPBOX_TOKEN e DROPBOX_FILE_PATH.",
+  "allData": [],
+  "matrizData": [],
+  "dashboardGoalsData": null,
+  "drinkAnalysisData": [],
+  "projecaoData": null,
+  "dadosDespesas": []
+}
