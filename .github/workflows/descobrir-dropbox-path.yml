@@ -1,0 +1,27 @@
+name: Descobrir caminho da planilha no Dropbox
+
+on:
+  workflow_dispatch:
+    inputs:
+      nome_arquivo:
+        description: 'Nome exato da planilha no Dropbox'
+        required: true
+        default: 'Por venda_2026.xlsm'
+
+jobs:
+  descobrir-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Baixar repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Procurar arquivo no Dropbox
+        env:
+          DROPBOX_TOKEN: ${{ secrets.DROPBOX_TOKEN }}
+          DROPBOX_SEARCH_NAME: ${{ github.event.inputs.nome_arquivo }}
+        run: node scripts/descobrir_dropbox_path.mjs
