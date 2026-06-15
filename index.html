@@ -38,7 +38,11 @@
 </div>
 <script>
 (function(){
-  var DASHBOARD_URL = "/janela-bar-dashboard/";
+  var PREVIEW_HOST = "raw.githack.com";
+  var isPreview = location.hostname === PREVIEW_HOST;
+  var DASHBOARD_URL = isPreview
+    ? "https://raw.githack.com/NevesPNG68/janela-bar-dashboard/main/"
+    : "/janela-bar-dashboard/";
   var MOBILE_QUERY = "(max-width: 820px), (pointer: coarse)";
   var isMobile = window.matchMedia && window.matchMedia(MOBILE_QUERY).matches;
 
@@ -50,7 +54,6 @@
   var boot = document.getElementById("boot");
   var shell = document.getElementById("mobile-shell");
   var frame = document.getElementById("dashboard-frame");
-  var status = document.getElementById("mobile-status");
   var statusText = document.getElementById("mobile-status-text");
   var retry = document.getElementById("mobile-retry");
   var patched = false;
@@ -150,11 +153,11 @@
     showOriginalSelect(doc, "f-ano");
     showOriginalSelect(doc, "f-tipo");
     showOriginalSelect(doc, "f-pgto");
-    createNativeMulti(win, doc, "mes", "Mes");
-    createNativeMulti(win, doc, "grupo", "Grupo");
-    createNativeMulti(win, doc, "semana", "Semana do Mes");
-    createNativeMulti(win, doc, "dia", "Dia da Semana");
-    createNativeMulti(win, doc, "produto", "Produto");
+    createNativeFilter(win, doc, "mes", "Mes");
+    createNativeFilter(win, doc, "grupo", "Grupo");
+    createNativeFilter(win, doc, "semana", "Semana do Mes");
+    createNativeFilter(win, doc, "dia", "Dia da Semana");
+    createNativeFilter(win, doc, "produto", "Produto");
     patched = true;
   }
 
@@ -166,7 +169,7 @@
     if(wrap) wrap.style.display = "none";
   }
 
-  function createNativeMulti(win, doc, key, label){
+  function createNativeFilter(win, doc, key, label){
     var optionsWrap = doc.getElementById(key + "-options");
     var button = doc.getElementById(key + "-btn");
     if(!optionsWrap || !button) return;
@@ -209,8 +212,8 @@
   function applyNativeValue(win, doc, key, value){
     if(typeof win.clearMs === "function") win.clearMs(key);
     if(value){
-      var escaped = value.replace(/\\/g,"\\\\").replace(/'/g,"\\'");
-      var opt = doc.querySelector(".ms-opt[data-key='" + key + "'][data-val='" + escaped + "']");
+      var opts = Array.prototype.slice.call(doc.querySelectorAll(".ms-opt[data-key='" + key + "']"));
+      var opt = opts.find(function(item){ return item.getAttribute("data-val") === value; });
       if(opt && typeof win.toggleMsOpt === "function") win.toggleMsOpt(opt);
     }else if(typeof win.scheduleApplyFilters === "function"){
       win.scheduleApplyFilters();
