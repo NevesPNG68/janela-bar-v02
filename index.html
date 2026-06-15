@@ -50,6 +50,7 @@
   var retry = document.getElementById("mobile-retry");
   var pollTimer = null;
   var safetyTimer = null;
+  var stableRenderForced = false;
 
   boot.style.display = "none";
   shell.style.display = "block";
@@ -63,8 +64,9 @@
   }
 
   function loadFrame(){
+    stableRenderForced = false;
     setStatus("Abrindo com filtros nativos no celular.", false);
-    frame.src = DASHBOARD_URL + "?mobileNative=1&v=" + Date.now();
+    frame.src = DASHBOARD_URL + "?mobileNative=1&stableMobile=1&v=" + Date.now();
     clearTimeout(safetyTimer);
     safetyTimer = setTimeout(function(){
       setStatus("A montagem demorou no celular. A tela preta foi bloqueada; tente novamente sem sair deste link.", true);
@@ -96,6 +98,7 @@
     clearInterval(pollTimer);
     pollTimer = setInterval(function(){
       try{
+        stabilizeDashboardRuntime(frame.contentWindow, doc);
         injectMobileCss(doc);
         installNativeFilters(frame.contentWindow, doc);
         preventBlackScreen(doc);
@@ -106,6 +109,30 @@
         }
       }catch(e){}
     }, 700);
+  }
+
+  function stabilizeDashboardRuntime(win, doc){
+    try{
+      win.V02_STABLE_MOBILE = true;
+      win.isMobileView = function(){ return false; };
+    }catch(e){}
+
+    var dashboard = doc.getElementById("dashboard");
+    if(stableRenderForced || !dashboard || dashboard.style.display === "none") return;
+    if(typeof win.applyFilters !== "function") return;
+
+    stableRenderForced = true;
+    setTimeout(function(){
+      try{
+        win.V02_STABLE_MOBILE = true;
+        win.isMobileView = function(){ return false; };
+        win.applyFilters();
+        if(typeof win.resizeDashboardCharts === "function"){
+          setTimeout(function(){ win.resizeDashboardCharts(); }, 500);
+          setTimeout(function(){ win.resizeDashboardCharts(); }, 1500);
+        }
+      }catch(e){}
+    }, 400);
   }
 
   function injectMobileCss(doc){
@@ -214,6 +241,10 @@
 
   function applyNativeValue(win, doc, key, value){
     if(value === "__load__") return;
+    try{
+      win.V02_STABLE_MOBILE = true;
+      win.isMobileView = function(){ return false; };
+    }catch(e){}
     clearMsWithoutRender(doc, key);
     if(value) selectMsWithoutRender(doc, key, value);
     if(typeof win.scheduleApplyFilters === "function") win.scheduleApplyFilters();
