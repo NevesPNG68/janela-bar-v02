@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JANELA BAR — Dashboard v02</title>
+<meta http-equiv="refresh" content="0; url=/janela-bar-dashboard/">
+<title>JANELA BAR — Redirecionando</title>
 <style>
   :root{--bg:#0a0a0f;--card:#18181f;--border:#26263a;--accent:#f5a623;--text:#f0f0f8;--muted:#d7d4ef}
   *{box-sizing:border-box}
@@ -11,24 +12,19 @@
   #boot{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
   .box{max-width:760px;background:var(--card);border:1px solid var(--border);border-top:4px solid var(--accent);border-radius:16px;padding:28px;box-shadow:0 0 24px rgba(245,166,35,.18)}
   h1{margin:0 0 12px;color:var(--accent);letter-spacing:.04em}p{line-height:1.5;color:var(--muted)}
+  a{color:var(--accent);font-weight:bold}
 </style>
+<script>
+  window.location.replace('/janela-bar-dashboard/?v=' + Date.now());
+</script>
 </head>
 <body>
-<div id="boot"><div class="box"><h1>JANELA BAR — v02</h1><p>Carregando layout aprovado e base automática do Dropbox...</p></div></div>
-<script>
-(async function(){
-  try{
-    var origem = "/janela-bar-dashboard/index.html?v=" + Date.now();
-    var resp = await fetch(origem, { cache: "no-store" });
-    if(!resp.ok) throw new Error("HTTP " + resp.status);
-    var html = await resp.text();
-    document.open();
-    document.write(html);
-    document.close();
-  }catch(err){
-    document.getElementById("boot").innerHTML = '<div class="box"><h1>JANELA BAR — v02</h1><p>Não foi possível carregar automaticamente o dashboard aprovado.</p><p>Detalhe: '+String(err && err.message ? err.message : err)+'</p></div>';
-  }
-})();
-</script>
+<div id="boot">
+  <div class="box">
+    <h1>JANELA BAR</h1>
+    <p>Redirecionando para o dashboard aprovado...</p>
+    <p>Se não abrir automaticamente, <a href="/janela-bar-dashboard/">clique aqui</a>.</p>
+  </div>
+</div>
 </body>
 </html>
