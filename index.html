@@ -48,7 +48,6 @@
   var frame = document.getElementById("dashboard-frame");
   var statusText = document.getElementById("mobile-status-text");
   var retry = document.getElementById("mobile-retry");
-  var nativeReady = false;
   var pollTimer = null;
   var safetyTimer = null;
 
@@ -64,12 +63,11 @@
   }
 
   function loadFrame(){
-    nativeReady = false;
     setStatus("Abrindo com filtros nativos no celular.", false);
     frame.src = DASHBOARD_URL + "?mobileNative=1&v=" + Date.now();
     clearTimeout(safetyTimer);
     safetyTimer = setTimeout(function(){
-      setStatus("A base carregou, mas a montagem demorou. A tela preta foi bloqueada; tente novamente sem sair deste link.", true);
+      setStatus("A montagem demorou no celular. A tela preta foi bloqueada; tente novamente sem sair deste link.", true);
       try{
         var d = frame.contentDocument;
         if(!d) return;
@@ -77,7 +75,7 @@
         var upload = d.getElementById("upload-screen");
         var hint = d.getElementById("hosted-status");
         if(upload) upload.style.display = "flex";
-        if(hint) hint.textContent = "A montagem ficou lenta no celular. Tente novamente ou selecione a planilha localmente.";
+        if(hint) hint.textContent = "A montagem demorou no celular. Tente novamente ou selecione a planilha localmente.";
       }catch(e){}
     }, 18000);
   }
@@ -89,24 +87,17 @@
   });
 
   function patchDashboardRuntime(){
-    var win, doc;
-    try{
-      win = frame.contentWindow;
-      doc = frame.contentDocument || win.document;
-    }catch(err){
-      setStatus("Nao foi possivel ajustar o modo mobile automaticamente.", true);
-      return;
-    }
-    if(!win || !doc) return;
+    var doc;
+    try{ doc = frame.contentDocument || frame.contentWindow.document; }
+    catch(err){ setStatus("Nao foi possivel ajustar o modo mobile automaticamente.", true); return; }
+    if(!doc) return;
 
     injectMobileCss(doc);
-    installFastMobileRender(win, doc);
     clearInterval(pollTimer);
     pollTimer = setInterval(function(){
       try{
         injectMobileCss(doc);
-        installNativeFilters(win, doc);
-        installFastMobileRender(win, doc);
+        installNativeFilters(frame.contentWindow, doc);
         preventBlackScreen(doc);
         var dashboard = doc.getElementById("dashboard");
         if(dashboard && dashboard.style.display !== "none"){
@@ -124,7 +115,7 @@
     style.textContent = "@media (max-width:1024px),(pointer:coarse){"+
       "html,body{background:#0a0a0f!important;}"+
       "#loading-screen{background:#0a0a0f!important;color:#f0f0f8!important;}"+
-      "#loading-screen:after{content:'Montando primeiro painel...';color:#d7d4ef;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}"+
+      "#loading-screen:after{content:'Carregando painel no celular...';color:#d7d4ef;font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;}"+
       ".filters{display:grid!important;grid-template-columns:1fr 1fr!important;gap:.72rem!important;width:100%!important;}"+
       ".filter-group{min-width:0!important;width:100%!important;}"+
       ".filter-group select,.v02-native-select{display:block!important;width:100%!important;min-width:0!important;min-height:44px!important;background:#171722!important;color:#fff!important;border:1px solid #393954!important;border-radius:9px!important;padding:.56rem .7rem!important;font-size:1rem!important;font-weight:900!important;color-scheme:dark!important;}"+
@@ -147,121 +138,18 @@
     loading.style.background = "#0a0a0f";
     var pct = parseInt((doc.getElementById("ld-num") || {}).textContent || "0", 10);
     var step = ((doc.getElementById("ld-step") || {}).textContent || "").toLowerCase();
-    if(pct >= 90 || step.indexOf("render") >= 0 || step.indexOf("filtro") >= 0) revealDashboard(doc);
-  }
-
-  function installFastMobileRender(win, doc){
-    if(win.__v02FastMobileInstalled) return;
-    var lazyTargets = {
-      renderQuadroSemanal:"weekly-demonstrativo",
-      renderDrinkAnalysis:"drink-analysis",
-      renderDrinkVendasTicket:"c-drink-vendas-tkt",
-      renderCustos:"quadro-custos",
-      renderKpiLinha:"quadro-kpi",
-      renderProjecao:"proj-section",
-      renderMensal:"c-mensal",
-      renderCanal:"c-canal",
-      renderGrupo:"c-grupo",
-      renderPgto:"c-pgto",
-      renderDia:"c-dia",
-      renderHora:"c-hora",
-      renderTkt:"c-tkt",
-      renderVendas:"c-vendas-heatmap",
-      renderSemana:"c-semana",
-      renderTable:"t-body"
-    };
-    var originals = {};
-    var pending = {};
-    var rendered = {};
-    var ticking = false;
-
-    function targetElement(id){
-      var el = doc.getElementById(id);
-      if(!el) return null;
-      return (el.closest && el.closest(".chart-card,.table-card,.fin-zone,.kpi-row,#proj-section")) || el;
-    }
-    function nearViewport(id, margin){
-      var el = targetElement(id);
-      if(!el) return false;
-      var r = el.getBoundingClientRect();
-      var h = win.innerHeight || doc.documentElement.clientHeight || 800;
-      var m = typeof margin === "number" ? margin : 260;
-      return r.bottom >= -m && r.top <= h + m;
-    }
-    function markRenderStateStale(){
-      Object.keys(lazyTargets).forEach(function(name){
-        rendered[name] = false;
-        pending[name] = false;
-      });
-    }
-    function runOriginal(name){
-      if(rendered[name]) return undefined;
-      pending[name] = false;
-      rendered[name] = true;
-      try{ return originals[name].call(win); }catch(e){ rendered[name] = false; return undefined; }
-    }
-    function runPending(force){
-      ticking = false;
-      Object.keys(pending).forEach(function(name){
-        var id = lazyTargets[name];
-        if(!pending[name] || rendered[name]) return;
-        if(force || nearViewport(id, 320)) runOriginal(name);
-      });
-    }
-    function schedulePending(force){
-      if(ticking && !force) return;
-      ticking = true;
-      setTimeout(function(){ runPending(!!force); }, force ? 80 : 220);
-    }
-
-    Object.keys(lazyTargets).forEach(function(name){
-      if(typeof win[name] !== "function") return;
-      originals[name] = win[name];
-      win[name] = function(){
-        if(rendered[name]) return undefined;
-        if(nearViewport(lazyTargets[name], 260)) return runOriginal(name);
-        pending[name] = true;
-        return undefined;
-      };
-    });
-
-    if(typeof win.applyFilters === "function"){
-      var originalApplyFilters = win.applyFilters;
-      win.applyFilters = function(){
-        markRenderStateStale();
-        return originalApplyFilters.apply(this, arguments);
-      };
-    }
-
-    if(typeof win.setProgress === "function"){
-      var originalSetProgress = win.setProgress;
-      win.setProgress = function(pct, step){
-        var result = originalSetProgress.apply(this, arguments);
-        if(Number(pct) >= 90) revealDashboard(doc);
-        return result;
-      };
-    }
-
-    win.addEventListener("scroll", function(){ schedulePending(false); }, {passive:true});
-    win.addEventListener("resize", function(){ schedulePending(false); }, {passive:true});
-    win.addEventListener("orientationchange", function(){ setTimeout(function(){ schedulePending(false); }, 360); }, {passive:true});
-    win.__v02ResetLazyRender = markRenderStateStale;
-    win.__v02RenderVisible = function(){ schedulePending(true); };
-    win.__v02FastMobileInstalled = true;
-    setTimeout(function(){ schedulePending(false); }, 700);
+    if(pct >= 96 || step.indexOf("pronto") >= 0) revealDashboard(doc);
   }
 
   function installNativeFilters(win, doc){
     showOriginalSelect(doc, "f-ano");
     showOriginalSelect(doc, "f-tipo");
     showOriginalSelect(doc, "f-pgto");
-    var ok = true;
-    ok = createNativeFilter(win, doc, "mes", "Mes", false) && ok;
-    ok = createNativeFilter(win, doc, "grupo", "Grupo", false) && ok;
-    ok = createNativeFilter(win, doc, "semana", "Semana do Mes", false) && ok;
-    ok = createNativeFilter(win, doc, "dia", "Dia da Semana", false) && ok;
+    createNativeFilter(win, doc, "mes", "Mes", false);
+    createNativeFilter(win, doc, "grupo", "Grupo", false);
+    createNativeFilter(win, doc, "semana", "Semana do Mes", false);
+    createNativeFilter(win, doc, "dia", "Dia da Semana", false);
     createNativeFilter(win, doc, "produto", "Produto", true);
-    nativeReady = nativeReady || ok;
   }
 
   function showOriginalSelect(doc, id){
@@ -328,11 +216,8 @@
     if(value === "__load__") return;
     clearMsWithoutRender(doc, key);
     if(value) selectMsWithoutRender(doc, key, value);
-    revealDashboard(doc);
-    if(typeof win.__v02ResetLazyRender === "function") win.__v02ResetLazyRender();
     if(typeof win.scheduleApplyFilters === "function") win.scheduleApplyFilters();
     else if(typeof win.applyFilters === "function") win.applyFilters();
-    if(typeof win.__v02RenderVisible === "function") setTimeout(win.__v02RenderVisible, 500);
   }
 
   function clearMsWithoutRender(doc, key){
