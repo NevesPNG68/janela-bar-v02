@@ -172,6 +172,7 @@
     };
     var originals = {};
     var pending = {};
+    var rendered = {};
     var ticking = false;
 
     function targetElement(id){
@@ -187,15 +188,24 @@
       var m = typeof margin === "number" ? margin : 260;
       return r.bottom >= -m && r.top <= h + m;
     }
+    function markRenderStateStale(){
+      Object.keys(lazyTargets).forEach(function(name){
+        rendered[name] = false;
+        pending[name] = false;
+      });
+    }
+    function runOriginal(name){
+      if(rendered[name]) return undefined;
+      pending[name] = false;
+      rendered[name] = true;
+      try{ return originals[name].call(win); }catch(e){ rendered[name] = false; return undefined; }
+    }
     function runPending(force){
       ticking = false;
       Object.keys(pending).forEach(function(name){
         var id = lazyTargets[name];
-        if(!pending[name]) return;
-        if(force || nearViewport(id, 320)){
-          pending[name] = false;
-          try{ originals[name].call(win); }catch(e){}
-        }
+        if(!pending[name] || rendered[name]) return;
+        if(force || nearViewport(id, 320)) runOriginal(name);
       });
     }
     function schedulePending(force){
@@ -208,11 +218,20 @@
       if(typeof win[name] !== "function") return;
       originals[name] = win[name];
       win[name] = function(){
-        if(nearViewport(lazyTargets[name], 260)) return originals[name].apply(this, arguments);
+        if(rendered[name]) return undefined;
+        if(nearViewport(lazyTargets[name], 260)) return runOriginal(name);
         pending[name] = true;
         return undefined;
       };
     });
+
+    if(typeof win.applyFilters === "function"){
+      var originalApplyFilters = win.applyFilters;
+      win.applyFilters = function(){
+        markRenderStateStale();
+        return originalApplyFilters.apply(this, arguments);
+      };
+    }
 
     if(typeof win.setProgress === "function"){
       var originalSetProgress = win.setProgress;
@@ -226,6 +245,7 @@
     win.addEventListener("scroll", function(){ schedulePending(false); }, {passive:true});
     win.addEventListener("resize", function(){ schedulePending(false); }, {passive:true});
     win.addEventListener("orientationchange", function(){ setTimeout(function(){ schedulePending(false); }, 360); }, {passive:true});
+    win.__v02ResetLazyRender = markRenderStateStale;
     win.__v02RenderVisible = function(){ schedulePending(true); };
     win.__v02FastMobileInstalled = true;
     setTimeout(function(){ schedulePending(false); }, 700);
@@ -309,6 +329,7 @@
     clearMsWithoutRender(doc, key);
     if(value) selectMsWithoutRender(doc, key, value);
     revealDashboard(doc);
+    if(typeof win.__v02ResetLazyRender === "function") win.__v02ResetLazyRender();
     if(typeof win.scheduleApplyFilters === "function") win.scheduleApplyFilters();
     else if(typeof win.applyFilters === "function") win.applyFilters();
     if(typeof win.__v02RenderVisible === "function") setTimeout(win.__v02RenderVisible, 500);
