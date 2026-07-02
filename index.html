@@ -3,159 +3,129 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JANELA BAR - Dashboard moderno</title>
+<title>JANELA BAR - Preview visual moderno</title>
 <style>
   :root{--bg:#f5f7fb;--card:#fff;--border:#dde5f2;--blue:#2563eb;--text:#132238;--muted:#667085}
   *{box-sizing:border-box}
-  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden}
-  #boot{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center;background:var(--bg)}
-  .box{max-width:720px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px;box-shadow:0 18px 44px rgba(19,34,56,.10)}
-  h1{margin:0 0 12px;color:var(--blue);letter-spacing:.02em}p{line-height:1.5;color:var(--muted)}
-  #preview-shell{display:none;min-height:100dvh;background:var(--bg)}
-  .status{position:fixed;left:12px;right:12px;top:12px;z-index:20;background:rgba(255,255,255,.96);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:10px;padding:10px 12px;box-shadow:0 14px 32px rgba(19,34,56,.14);max-width:520px}
-  .status strong{display:block;color:var(--blue);font-size:.8rem;letter-spacing:.04em;text-transform:uppercase;margin-bottom:3px}
-  .status span{display:block;color:var(--muted);font-size:.76rem;line-height:1.3}
-  .status button{margin-top:8px;background:var(--blue);border:0;color:#fff;border-radius:7px;padding:8px 10px;font-weight:800}
-  #dashboard-frame{position:fixed;inset:0;width:100%;height:100dvh;border:0;background:var(--bg)}
-  .ready .status{display:none}
+  html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font-family:Arial,sans-serif;overflow:hidden}
+  #frame{position:fixed;inset:0;width:100%;height:100dvh;border:0;background:var(--bg)}
+  #status{position:fixed;left:12px;right:12px;top:12px;z-index:20;max-width:560px;background:rgba(255,255,255,.96);border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:10px;padding:10px 12px;box-shadow:0 14px 32px rgba(19,34,56,.14)}
+  #status strong{display:block;color:var(--blue);font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+  #status span{display:block;color:var(--muted);font-size:.76rem;line-height:1.35}
+  .ready #status{display:none}
 </style>
 </head>
 <body>
-<div id="boot"><div class="box"><h1>JANELA BAR</h1><p>Carregando visual moderno...</p></div></div>
-<div id="preview-shell">
-  <iframe id="dashboard-frame" title="JANELA BAR Dashboard moderno"></iframe>
-  <div class="status" id="status">
-    <strong>Visual moderno</strong>
-    <span id="status-text">Aplicando acabamento moderno aos cards, graficos e tabelas.</span>
-    <button type="button" id="retry" style="display:none">Tentar novamente</button>
-  </div>
-</div>
+<iframe id="frame" title="JANELA BAR Dashboard moderno"></iframe>
+<div id="status"><strong>Visual moderno</strong><span>Aplicando tratamento em cards, graficos e tabelas.</span></div>
 <script>
 (function(){
   var isPreview = location.hostname === "raw.githack.com";
-  var DASHBOARD_URL = isPreview ? "https://raw.githack.com/NevesPNG68/janela-bar-dashboard/main/" : "/janela-bar-dashboard/";
-  var boot = document.getElementById("boot");
-  var shell = document.getElementById("preview-shell");
-  var frame = document.getElementById("dashboard-frame");
-  var statusText = document.getElementById("status-text");
-  var retry = document.getElementById("retry");
-  var pollTimer = null;
-  var safetyTimer = null;
-  var chartPalette = ["#2563eb","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#64748b"];
-  var softPalette = ["#dbeafe","#dcfce7","#fef3c7","#fee2e2","#ede9fe","#cffafe","#fce7f3","#e2e8f0"];
+  var dashboardUrl = isPreview ? "https://raw.githack.com/NevesPNG68/janela-bar-dashboard/main/" : "/janela-bar-dashboard/";
+  var frame = document.getElementById("frame");
+  var palette = ["#2563eb", "#16a34a", "#0891b2", "#9333ea", "#f97316", "#dc2626", "#0f766e", "#64748b"];
+  var soft = ["#dbeafe", "#dcfce7", "#cffafe", "#ede9fe", "#ffedd5", "#fee2e2", "#ccfbf1", "#e2e8f0"];
+  var timer = null;
 
-  boot.style.display = "none";
-  shell.style.display = "block";
-  document.documentElement.style.overflow = "hidden";
-  document.body.style.overflow = "hidden";
-
-  function setStatus(text, showRetry){
-    statusText.textContent = text;
-    retry.style.display = showRetry ? "inline-block" : "none";
-    shell.classList.remove("ready");
-  }
-
-  function loadFrame(){
-    setStatus("Aplicando acabamento moderno aos cards, graficos e tabelas.", false);
-    frame.src = DASHBOARD_URL + "?modernVisual=1&v=" + Date.now();
-    clearTimeout(safetyTimer);
-    safetyTimer = setTimeout(function(){
-      setStatus("O dashboard demorou para montar. Tente novamente sem sair deste link.", true);
-      try{ var doc = frame.contentDocument; if(doc) injectModernStyle(doc); }catch(e){}
-    }, 18000);
-  }
-
-  retry.addEventListener("click", loadFrame);
-  frame.addEventListener("load", function(){ setStatus("Preparando layout moderno...", false); patchDashboard(); });
-
-  function patchDashboard(){
-    var win, doc;
-    try{ win = frame.contentWindow; doc = frame.contentDocument || win.document; }
-    catch(err){ setStatus("Nao foi possivel aplicar o visual automaticamente.", true); return; }
-    if(!doc) return;
-    injectModernStyle(doc);
-    clearInterval(pollTimer);
-    pollTimer = setInterval(function(){
+  frame.src = dashboardUrl + "?modernVisual=1&v=" + Date.now();
+  frame.addEventListener("load", function(){
+    clearInterval(timer);
+    timer = setInterval(function(){
       try{
-        injectModernStyle(doc);
+        var win = frame.contentWindow;
+        var doc = frame.contentDocument || win.document;
+        injectCss(doc);
         installNativeFilters(win, doc);
-        tuneChartColors(win, doc);
-        normalizeTables(doc);
-        normalizeCards(doc);
-        var dashboard = doc.getElementById("dashboard");
-        if(dashboard && dashboard.style.display !== "none"){
-          clearTimeout(safetyTimer);
-          shell.classList.add("ready");
-        }
+        modernizeTables(doc);
+        modernizeCards(doc);
+        modernizeCharts(win, doc);
+        if(doc.getElementById("dashboard") && doc.getElementById("dashboard").style.display !== "none") document.body.classList.add("ready");
       }catch(e){}
-    }, 900);
-  }
+    }, 650);
+  });
 
-  function injectModernStyle(doc){
-    if(doc.getElementById("v02-modern-style")) return;
+  function injectCss(doc){
+    if(doc.getElementById("v02-modern-clean-style")) return;
     var style = doc.createElement("style");
-    style.id = "v02-modern-style";
+    style.id = "v02-modern-clean-style";
     style.textContent =
-      ":root{--bg:#f5f7fb!important;--surface:#ffffff!important;--card:#ffffff!important;--border:#dde5f2!important;--accent:#2563eb!important;--accent2:#10b981!important;--accent3:#8b5cf6!important;--text:#132238!important;--muted:#667085!important;--success:#10b981!important;}"+
-      "*,*::before,*::after{text-shadow:none!important;}"+
-      "html,body,#dashboard,.main,.audit-wrap{background:#f5f7fb!important;color:#132238!important;}"+
-      "#loading-screen,#upload-screen{background:#f5f7fb!important;color:#132238!important;}"+
-      ".ld-logo,.upload-logo,.topbar-logo{color:#2563eb!important;}"+
-      ".ld-logo span,.upload-logo span,.topbar-logo span{color:#132238!important;}"+
-      ".topbar{background:rgba(255,255,255,.97)!important;border-bottom:1px solid #dde5f2!important;box-shadow:0 10px 30px rgba(19,34,56,.08)!important;backdrop-filter:blur(16px)!important;}"+
-      ".topbar-logo{font-family:Inter,Arial,sans-serif!important;font-weight:900!important;letter-spacing:.01em!important;}"+
-      ".topbar-divider{background:#dde5f2!important;}"+
-      ".main{padding:1.25rem 1.4rem 2.5rem!important;}"+
-      ".filters{gap:.7rem!important;}"+
-      ".filter-group{min-width:0!important;}"+
-      ".filter-group label,.kpi-label,.kpi-sub,.chart-card h3,.table-header h3,.fin-kpi-label,.fin-kpi-sub,.goal-week,.table-search,.file-name,.footer{color:#667085!important;}"+
-      ".filter-group label,.kpi-label,.chart-card h3,.table-header h3,.fin-kpi-label{font-family:Inter,Arial,sans-serif!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.08em!important;}"+
-      ".filter-group select,.v02-native-select,.table-search,.audit-filter select,.audit-filter input{background:#fff!important;color:#132238!important;border:1px solid #cbd5e1!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(19,34,56,.04)!important;color-scheme:light!important;}"+
-      ".filter-group select:focus,.v02-native-select:focus,.table-search:focus{outline:3px solid rgba(37,99,235,.16)!important;border-color:#2563eb!important;}"+
-      ".filter-group select option,.v02-native-select option{background:#fff!important;color:#132238!important;}"+
-      "#f-ano-single-wrap,#f-tipo-single-wrap,#f-pgto-single-wrap,#mes-btn,#grupo-btn,#semana-btn,#dia-btn,#produto-btn,#mes-dropdown,#grupo-dropdown,#semana-dropdown,#dia-dropdown,#produto-dropdown{display:none!important;}"+
-      ".v02-native-select{display:block!important;width:100%!important;min-width:118px!important;min-height:42px!important;padding:.55rem .68rem!important;font-size:.94rem!important;font-weight:750!important;}"+
-      ".kpi-card,.chart-card,.table-card,.audit-box,.audit-result-card,.audit-card,.audit-analytic-card,.goal-panel,.goal-gauge-card,.drink-summary-card,.fin-zone,.fin-kpi{background:#fff!important;background-image:none!important;border:1px solid #dde5f2!important;border-radius:10px!important;box-shadow:0 12px 28px rgba(19,34,56,.08)!important;color:#132238!important;overflow:hidden!important;}"+
-      ".chart-card{padding:1.2rem 1.25rem!important;}"+
-      ".kpi-card::after,.fin-kpi::after,.chart-card::after,.table-card::after,.audit-box::after,.audit-result-card::after,.audit-card::after,.audit-analytic-card::after,.fin-zone::after,.goal-panel::after,.goal-gauge-card::after,.drink-summary-card::after{display:none!important;}"+
-      ".kpi-card::before,.fin-kpi::before,.goal-panel::before{height:3px!important;background:var(--kpi-color,#2563eb)!important;box-shadow:none!important;}"+
-      ".kpi-card:hover,.fin-kpi:hover,.chart-card:hover,.table-card:hover,.audit-box:hover,.audit-result-card:hover,.audit-card:hover,.audit-analytic-card:hover,.fin-zone:hover,.goal-panel:hover,.goal-gauge-card:hover,.drink-summary-card:hover{transform:none!important;border-color:#c6d3e4!important;box-shadow:0 16px 38px rgba(19,34,56,.11)!important;}"+
-      ".kpi-value,.fin-kpi-val,.audit-result-value,.goal-title,.goal-meta,.goal-value,.goal-pct,.audit-card-title{font-family:Inter,Arial,sans-serif!important;color:#132238!important;font-weight:900!important;letter-spacing:-.01em!important;}"+
-      ".section-title{font-family:Inter,Arial,sans-serif!important;font-size:1.05rem!important;font-weight:900!important;letter-spacing:.01em!important;color:#132238!important;text-transform:none!important;}"+
-      ".section-title::after{background:#dde5f2!important;}"+
-      ".section-title .tag{font-family:Inter,Arial,sans-serif!important;background:#eaf2ff!important;color:#2563eb!important;border-radius:999px!important;padding:.22rem .62rem!important;font-weight:800!important;}"+
-      ".fin-zone-title{font-family:Inter,Arial,sans-serif!important;font-weight:900!important;letter-spacing:.02em!important;}"+
-      ".fin-zone-title .dot{box-shadow:none!important;}"+
-      ".table-header,.audit-card-head,.audit-analytic-head{background:#fff!important;border-bottom:1px solid #dde5f2!important;}"+
-      ".table-wrap,.audit-analytic-wrap{background:#fff!important;}"+
-      "table{background:#fff!important;border-collapse:separate!important;border-spacing:0!important;}"+
-      "thead th,.audit-analytic-table th{background:#f8fafc!important;color:#475569!important;border-bottom:1px solid #dde5f2!important;}"+
-      "tbody tr,.audit-analytic-table td{border-bottom:1px solid #edf2f7!important;}"+
-      "tbody tr:hover,tbody tr:hover td,.audit-analytic-table tr:hover td{background:#f8fbff!important;}"+
-      "tbody td,.audit-analytic-table td{color:#132238!important;}"+
-      ".fin-zone.receita,.fin-zone.despesas{background:#fff!important;border-left-width:5px!important;}"+
-      ".fin-zone.receita{border-left-color:#10b981!important;border-top-color:#10b981!important;}"+
-      ".fin-zone.despesas{border-left-color:#ef4444!important;border-top-color:#ef4444!important;}"+
-      ".fin-zone.receita .fin-zone-title,.fin-zone.receita .fin-kpi-val,.audit-col.entradas .mini-label,.audit-col.entradas .mini-value,.audit-analytic-table td.pos{color:#059669!important;}"+
-      ".fin-zone.despesas .fin-zone-title,.fin-zone.despesas .fin-kpi-val,.audit-col.saidas .mini-label,.audit-col.saidas .mini-value,.audit-analytic-table td.neg,.audit-result-card.neg .audit-result-value{color:#dc2626!important;}"+
-      ".ld-track,.ld-bar-wrap,.lucro-bar-track{background:#dde5f2!important;stroke:#dde5f2!important;}"+
-      ".ld-fill,.ld-bar{stroke:#2563eb!important;background:#2563eb!important;box-shadow:none!important;}"+
-      ".semi-gauge::after{background:#fff!important;box-shadow:inset 0 5px 14px rgba(19,34,56,.08)!important;}"+
-      ".reload-btn{background:#fff!important;border:1px solid #cbd5e1!important;color:#132238!important;border-radius:8px!important;}"+
-      ".upload-btn{background:#2563eb!important;color:#fff!important;border-radius:8px!important;}"+
-      "canvas{filter:none!important;}"+
-      ".v02-soft-table td,.v02-soft-table th{background:#fff!important;color:#132238!important;border-color:#e5ebf5!important;}"+
-      ".v02-soft-table thead th,.v02-soft-table .v02-header-cell{background:#f8fafc!important;color:#475569!important;}"+
-      ".v02-soft-table .v02-total-cell{background:#eaf2ff!important;color:#1d4ed8!important;font-weight:900!important;}"+
-      ".v02-soft-table .v02-low-cell{background:#fee2e2!important;color:#b91c1c!important;font-weight:900!important;}"+
-      ".v02-soft-table .v02-high-cell{background:#dcfce7!important;color:#047857!important;font-weight:900!important;}"+
-      "@media(max-width:1024px),(pointer:coarse){.main{padding:1rem .82rem 2rem!important}.filters{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}.filter-group{width:100%!important}.filter-group select,.v02-native-select{width:100%!important;min-width:0!important;min-height:42px!important}.section-title{text-transform:uppercase!important;letter-spacing:.05em!important}.kpi-value,.fin-kpi-val{font-size:1.38rem!important}}";
+      ":root{--bg:#f5f7fb!important;--surface:#fff!important;--card:#fff!important;--border:#dde5f2!important;--accent:#2563eb!important;--accent2:#16a34a!important;--accent3:#9333ea!important;--text:#132238!important;--muted:#667085!important;--success:#16a34a!important}"+
+      "*,*::before,*::after{text-shadow:none!important}"+
+      "html,body,#dashboard,.main,.audit-wrap{background:#f5f7fb!important;color:#132238!important}"+
+      "#loading-screen,#upload-screen{background:#f5f7fb!important;color:#132238!important}"+
+      ".topbar{background:rgba(255,255,255,.97)!important;border-bottom:1px solid #dde5f2!important;box-shadow:0 10px 30px rgba(19,34,56,.08)!important;backdrop-filter:blur(16px)!important}"+
+      ".topbar-logo,.ld-logo,.upload-logo{font-family:Inter,Arial,sans-serif!important;font-weight:900!important;color:#2563eb!important;letter-spacing:.01em!important}"+
+      ".topbar-logo span,.ld-logo span,.upload-logo span{color:#132238!important}"+
+      ".topbar-divider{background:#dde5f2!important}"+
+      ".main{padding:1.25rem 1.4rem 2.5rem!important}"+
+      ".section-title{font-family:Inter,Arial,sans-serif!important;font-size:1.05rem!important;font-weight:900!important;letter-spacing:.01em!important;color:#132238!important;text-transform:none!important}"+
+      ".section-title::after{background:#dde5f2!important}"+
+      ".section-title .tag{font-family:Inter,Arial,sans-serif!important;background:#eaf2ff!important;color:#2563eb!important;border-radius:999px!important;padding:.22rem .62rem!important;font-weight:800!important}"+
+      ".filter-group label,.kpi-label,.chart-card h3,.table-header h3,.fin-kpi-label{font-family:Inter,Arial,sans-serif!important;font-size:.68rem!important;font-weight:800!important;letter-spacing:.08em!important;color:#667085!important}"+
+      ".filter-group select,.v02-native-select,.table-search,.audit-filter select,.audit-filter input{background:#fff!important;color:#132238!important;border:1px solid #cbd5e1!important;border-radius:8px!important;box-shadow:0 1px 2px rgba(19,34,56,.04)!important;color-scheme:light!important}"+
+      ".filter-group select:focus,.v02-native-select:focus,.table-search:focus{outline:3px solid rgba(37,99,235,.16)!important;border-color:#2563eb!important}"+
+      "#f-ano-single-wrap,#f-tipo-single-wrap,#f-pgto-single-wrap,#mes-btn,#grupo-btn,#semana-btn,#dia-btn,#produto-btn,#mes-dropdown,#grupo-dropdown,#semana-dropdown,#dia-dropdown,#produto-dropdown{display:none!important}"+
+      ".v02-native-select{display:block!important;width:100%!important;min-width:118px!important;min-height:42px!important;padding:.55rem .68rem!important;font-size:.94rem!important;font-weight:750!important}"+
+      ".kpi-card,.chart-card,.table-card,.audit-box,.audit-result-card,.audit-card,.audit-analytic-card,.goal-panel,.goal-gauge-card,.drink-summary-card,.fin-zone,.fin-kpi{background:#fff!important;background-image:none!important;border:1px solid #dde5f2!important;border-radius:10px!important;box-shadow:0 12px 28px rgba(19,34,56,.08)!important;color:#132238!important;overflow:hidden!important}"+
+      ".chart-card{padding:1.2rem 1.25rem!important}"+
+      ".kpi-card::after,.fin-kpi::after,.chart-card::after,.table-card::after,.audit-box::after,.audit-result-card::after,.audit-card::after,.audit-analytic-card::after,.fin-zone::after,.goal-panel::after,.goal-gauge-card::after,.drink-summary-card::after{display:none!important}"+
+      ".kpi-card::before,.fin-kpi::before,.goal-panel::before{height:3px!important;background:var(--kpi-color,#2563eb)!important;box-shadow:none!important}"+
+      ".kpi-value,.fin-kpi-val,.audit-result-value,.goal-title,.goal-meta,.goal-value,.goal-pct,.audit-card-title{font-family:Inter,Arial,sans-serif!important;color:#132238!important;font-weight:900!important;letter-spacing:-.01em!important}"+
+      ".fin-zone.receita,.fin-zone.despesas{background:#fff!important;border-left-width:5px!important}"+
+      ".fin-zone.receita{border-left-color:#16a34a!important;border-top-color:#16a34a!important}"+
+      ".fin-zone.despesas{border-left-color:#dc2626!important;border-top-color:#dc2626!important}"+
+      ".fin-zone.receita .fin-zone-title,.fin-zone.receita .fin-kpi-val{color:#15803d!important}"+
+      ".fin-zone.despesas .fin-zone-title,.fin-zone.despesas .fin-kpi-val{color:#b91c1c!important}"+
+      ".table-header,.audit-card-head,.audit-analytic-head{background:#fff!important;border-bottom:1px solid #dde5f2!important}"+
+      ".table-wrap,.audit-analytic-wrap{background:#fff!important}"+
+      "table{background:#fff!important;border-collapse:separate!important;border-spacing:0!important}"+
+      "th,td{border-color:#e5ebf5!important}"+
+      "thead th,.audit-analytic-table th{background:#f8fafc!important;color:#475569!important;border-bottom:1px solid #dde5f2!important}"+
+      "tbody td,.audit-analytic-table td{color:#132238!important;background:#fff!important}"+
+      "tbody tr:hover td,.audit-analytic-table tr:hover td{background:#f8fbff!important}"+
+      ".v02-force-light{background:#fff!important;color:#132238!important}"+
+      ".v02-force-head{background:#f8fafc!important;color:#475569!important}"+
+      ".v02-force-total{background:#eaf2ff!important;color:#1d4ed8!important;font-weight:900!important}"+
+      ".v02-force-high{background:#dcfce7!important;color:#047857!important;font-weight:900!important}"+
+      ".v02-force-low{background:#fee2e2!important;color:#b91c1c!important;font-weight:900!important}"+
+      ".reload-btn{background:#fff!important;border:1px solid #cbd5e1!important;color:#132238!important;border-radius:8px!important}"+
+      ".upload-btn{background:#2563eb!important;color:#fff!important;border-radius:8px!important}"+
+      "canvas{filter:none!important}"+
+      "@media(max-width:1024px),(pointer:coarse){.main{padding:1rem .82rem 2rem!important}.filters{display:grid!important;grid-template-columns:1fr 1fr!important;width:100%!important}.filter-group{width:100%!important}.filter-group select,.v02-native-select{width:100%!important;min-width:0!important;min-height:42px!important}.section-title{text-transform:uppercase!important;letter-spacing:.05em!important}}";
     doc.head.appendChild(style);
   }
 
+  function rgbParts(value){
+    var match = String(value || "").match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
+  }
+  function isDark(value){
+    var p = rgbParts(value);
+    if(!p) return false;
+    return (p[0] * .299 + p[1] * .587 + p[2] * .114) < 80;
+  }
   function rgba(hex, alpha){
     var c = hex.replace("#", "");
     return "rgba(" + parseInt(c.slice(0,2),16) + "," + parseInt(c.slice(2,4),16) + "," + parseInt(c.slice(4,6),16) + "," + alpha + ")";
+  }
+
+  function modernizeTables(doc){
+    Array.prototype.forEach.call(doc.querySelectorAll("table"), function(table){
+      Array.prototype.forEach.call(table.querySelectorAll("th,td"), function(cell){
+        var tag = cell.tagName.toLowerCase();
+        var text = (cell.textContent || "").toLowerCase();
+        var computed = frame.contentWindow.getComputedStyle(cell);
+        var bg = computed.backgroundColor;
+        var color = computed.color;
+        cell.classList.remove("v02-force-light", "v02-force-head", "v02-force-total", "v02-force-high", "v02-force-low");
+        if(tag === "th") cell.classList.add("v02-force-head");
+        else if(/total/.test(text) || cell.cellIndex === cell.parentElement.children.length - 1) cell.classList.add("v02-force-total");
+        else if(isDark(bg) || isDark(color)) cell.classList.add("v02-force-light");
+        var style = (cell.getAttribute("style") || "").toLowerCase();
+        if(/rgb\(255|#ff|red|vermelh|menor/.test(style)) cell.classList.add("v02-force-low");
+        if(/rgb\(0,? ?255|#00|green|verde|maior/.test(style)) cell.classList.add("v02-force-high");
+      });
+    });
   }
 
   function chartList(win, doc){
@@ -166,7 +136,7 @@
         if(typeof win.Chart.instances.forEach === "function") win.Chart.instances.forEach(function(chart){ out.push(chart); });
         else Object.keys(win.Chart.instances).forEach(function(key){ if(win.Chart.instances[key]) out.push(win.Chart.instances[key]); });
       }
-      if(doc && typeof win.Chart.getChart === "function"){
+      if(typeof win.Chart.getChart === "function"){
         Array.prototype.forEach.call(doc.querySelectorAll("canvas"), function(canvas){
           var chart = win.Chart.getChart(canvas);
           if(chart && out.indexOf(chart) < 0) out.push(chart);
@@ -176,7 +146,7 @@
     return out;
   }
 
-  function tuneChartColors(win, doc){
+  function modernizeCharts(win, doc){
     chartList(win, doc).forEach(function(chart){
       if(!chart) return;
       var opts = chart.options || (chart.options = {});
@@ -192,7 +162,7 @@
       opts.plugins.legend.labels.usePointStyle = true;
       opts.plugins.tooltip = opts.plugins.tooltip || {};
       opts.plugins.tooltip.backgroundColor = "rgba(15,23,42,.96)";
-      opts.plugins.tooltip.titleColor = "#ffffff";
+      opts.plugins.tooltip.titleColor = "#fff";
       opts.plugins.tooltip.bodyColor = "#f8fafc";
       opts.plugins.tooltip.borderColor = "rgba(255,255,255,.14)";
       opts.plugins.tooltip.borderWidth = 1;
@@ -207,21 +177,21 @@
       });
       var type = (chart.config && chart.config.type || "").toLowerCase();
       (chart.data && chart.data.datasets || []).forEach(function(ds, index){
-        var color = chartPalette[index % chartPalette.length];
-        var isRound = Array.isArray(ds.backgroundColor) || /pie|doughnut|polar/.test(type);
-        if(isRound){
-          var count = (chart.data.labels || ds.data || []).length || chartPalette.length;
-          ds.backgroundColor = Array.from({length:count}, function(_, i){ return chartPalette[i % chartPalette.length]; });
+        var color = palette[index % palette.length];
+        var round = Array.isArray(ds.backgroundColor) || /pie|doughnut|polar/.test(type);
+        if(round){
+          var count = (chart.data.labels || ds.data || []).length || palette.length;
+          ds.backgroundColor = Array.from({length:count}, function(_, i){ return palette[i % palette.length]; });
           ds.hoverBackgroundColor = ds.backgroundColor;
-          ds.borderColor = "#ffffff";
+          ds.borderColor = "#fff";
           ds.borderWidth = 3;
         }else if(type === "line"){
           ds.borderColor = color;
           ds.backgroundColor = rgba(color, .14);
-          ds.pointBackgroundColor = "#ffffff";
+          ds.pointBackgroundColor = "#fff";
           ds.pointBorderColor = color;
           ds.pointHoverBackgroundColor = color;
-          ds.pointHoverBorderColor = "#ffffff";
+          ds.pointHoverBorderColor = "#fff";
           ds.pointRadius = Math.max(ds.pointRadius || 0, 3);
           ds.pointHoverRadius = Math.max(ds.pointHoverRadius || 0, 5);
           ds.borderWidth = 3;
@@ -240,24 +210,9 @@
     });
   }
 
-  function normalizeTables(doc){
-    Array.prototype.forEach.call(doc.querySelectorAll(".table-card table, .chart-card table, .audit-analytic-table"), function(table){
-      table.classList.add("v02-soft-table");
-      Array.prototype.forEach.call(table.querySelectorAll("th"), function(th){ th.classList.add("v02-header-cell"); });
-      Array.prototype.forEach.call(table.querySelectorAll("td"), function(td){
-        var text = (td.textContent || "").toLowerCase();
-        var attr = ((td.getAttribute("style") || "") + " " + (td.className || "")).toLowerCase();
-        if(/total/.test(text) || /total/.test(attr)) td.classList.add("v02-total-cell");
-        if(/rgb\(255|#ff|red|vermelh|menor|low/.test(attr)) td.classList.add("v02-low-cell");
-        if(/rgb\(0,? ?255|#00|green|verde|maior|high/.test(attr)) td.classList.add("v02-high-cell");
-      });
-    });
-  }
-
-  function normalizeCards(doc){
-    var colors = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+  function modernizeCards(doc){
     Array.prototype.forEach.call(doc.querySelectorAll(".kpi-card,.fin-kpi,.chart-card,.goal-panel,.drink-summary-card"), function(card, index){
-      if(!card.style.getPropertyValue("--kpi-color")) card.style.setProperty("--kpi-color", colors[index % colors.length]);
+      if(!card.style.getPropertyValue("--kpi-color")) card.style.setProperty("--kpi-color", palette[index % palette.length]);
     });
   }
 
@@ -271,7 +226,6 @@
     createNativeFilter(win, doc, "dia", "Dia da Semana");
     createNativeFilter(win, doc, "produto", "Produto");
   }
-
   function showOriginalSelect(doc, id){
     var sel = doc.getElementById(id);
     if(!sel) return;
@@ -279,7 +233,6 @@
     var wrap = doc.getElementById(id + "-single-wrap");
     if(wrap) wrap.style.display = "none";
   }
-
   function createNativeFilter(win, doc, key, label){
     var optionsWrap = doc.getElementById(key + "-options");
     var button = doc.getElementById(key + "-btn");
@@ -298,7 +251,6 @@
     }
     return populateNativeOptions(doc, key, select);
   }
-
   function populateNativeOptions(doc, key, select){
     var optionsWrap = doc.getElementById(key + "-options");
     if(!optionsWrap) return false;
@@ -320,37 +272,31 @@
     if(current && opts.some(function(opt){ return opt.getAttribute("data-val") === current; })) select.value = current;
     return true;
   }
-
   function applyNativeValue(win, doc, key, value){
     clearMsWithoutRender(doc, key);
     if(value) selectMsWithoutRender(doc, key, value);
     if(typeof win.scheduleApplyFilters === "function") win.scheduleApplyFilters();
     else if(typeof win.applyFilters === "function") win.applyFilters();
-    setTimeout(function(){ tuneChartColors(win, doc); normalizeTables(doc); }, 800);
+    setTimeout(function(){ modernizeTables(doc); modernizeCharts(win, doc); }, 800);
   }
-
   function clearMsWithoutRender(doc, key){
     var label = doc.getElementById(key + "-label");
     Array.prototype.forEach.call(doc.querySelectorAll(".ms-opt[data-key='" + key + "']"), function(el){
       el.classList.remove("ms-on");
       var chk = el.querySelector(".ms-chk");
-      if(chk){ chk.textContent = ""; }
+      if(chk) chk.textContent = "";
     });
     if(label) label.textContent = key === "semana" ? "Todas" : "Todos";
   }
-
   function selectMsWithoutRender(doc, key, value){
-    var opts = Array.prototype.slice.call(doc.querySelectorAll(".ms-opt[data-key='" + key + "']"));
-    var opt = opts.find(function(item){ return item.getAttribute("data-val") === value; });
+    var opt = Array.prototype.slice.call(doc.querySelectorAll(".ms-opt[data-key='" + key + "']")).find(function(item){ return item.getAttribute("data-val") === value; });
     if(!opt) return;
     opt.classList.add("ms-on");
     var chk = opt.querySelector(".ms-chk");
-    if(chk){ chk.textContent = "\u2713"; }
+    if(chk) chk.textContent = "\u2713";
     var label = doc.getElementById(key + "-label");
     if(label) label.textContent = value;
   }
-
-  loadFrame();
 })();
 </script>
 </body>
